@@ -11,13 +11,8 @@ import shutil
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
-import socket
-from pyngrok import ngrok
 
 app = FastAPI()
-
-# Use your Render URL
-BASE_URL = "https://your-app-name.onrender.com"  # Replace with your actual Render URL
 
 # Setup templates for rendering HTML
 templates = Jinja2Templates(directory="templates")
@@ -31,6 +26,9 @@ UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "qr_codes"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+# Use your Render URL (update this after deployment)
+BASE_URL = "https://your-app-name.onrender.com"
 
 def get_local_ip():
     try:
