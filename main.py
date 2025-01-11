@@ -47,23 +47,14 @@ def generate_code():
     formatted_code = '-'.join([raw_code[i:i+5] for i in range(0, len(raw_code), 5)])
     return formatted_code
 
-def get_public_url():
-    try:
-        # Start ngrok
-        public_url = ngrok.connect(8000)
-        print(f"Public URL: {public_url}")
-        return public_url.public_url
-    except Exception as e:
-        print(f"Error setting up ngrok: {e}")
-        return None
+@app.get("/")
+async def root():
+    return {"message": "API is running"}
 
 @app.get("/scan/{serial_number}")
 async def scan_page(request: Request, serial_number: str):
-    """
-    Render the scan result page
-    """
+    """Render the scan result page"""
     try:
-        # Get the details using existing logic
         details = await get_details(serial_number)
         return templates.TemplateResponse(
             "scan.html",
@@ -82,10 +73,6 @@ async def get_super():
 
 @app.post("/upload-csv/")
 async def upload_csv(file: UploadFile):
-    """
-    Upload CSV, generate a new field with alphanumeric hexadecimal codes,
-    generate QR codes, and return the updated CSV.
-    """
     try:
         if not file.filename.endswith(".csv"):
             return JSONResponse(
@@ -111,28 +98,27 @@ async def upload_csv(file: UploadFile):
         df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
         df["DATE OF ISSUANCE"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Get public URL instead of local IP
-        public_url = get_public_url()
-        if not public_url:
-            return JSONResponse(
-                status_code=500,
-                content={"error": "Could not generate public URL"}
-            )
-
-        # Use BASE_URL for QR codes
+        # Use the Render URL for QR codes
         base_url = f"{BASE_URL}/scan/"
-        print(f"QR Code base URL: {base_url}")
+        print(f"Using base URL: {base_url}")
 
-        # Generate QR codes with public URL
+        # Generate QR codes for each row
         for index, row in df.iterrows():
             try:
                 serial_number = str(row["IN-HOUSE SERIAL NUMBER"]).strip()
+                print(f"Processing Serial Number: {serial_number}")
+
+                if not serial_number:
+                    print("Warning: Empty serial number found")
+                    continue
+
                 qr_data = base_url + serial_number
+                print(f"QR Data URL: {qr_data}")
 
                 # Create QR code
                 qr = qrcode.QRCode(
                     version=1,
-                    error_correction=qrcode.constants.ERROR_CORRECT_H,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
                     box_size=10,
                     border=4,
                 )
@@ -141,47 +127,42 @@ async def upload_csv(file: UploadFile):
 
                 # Save QR code
                 qr_img = qr.make_image(fill_color="black", back_color="white")
-                qr_filename = f"{OUTPUT_FOLDER}/qr_{serial_number}.png"
-                qr_img.save(qr_filename)
+                qr_filename = upload_dir / f"qr_{serial_number}.png"
+                qr_img.save(str(qr_filename))
+                print(f"Saved QR code to: {qr_filename}")
 
             except Exception as row_error:
                 print(f"Error processing row: {row_error}")
                 continue
 
         # Save the updated CSV with QR codes links
-        df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(lambda x: f"/qr_codes/qr_{x}.png")
+        df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(lambda x: f"/qr_codes/{upload_id}/qr_{x}.png")
 
-        # Store the DataFrame in a file - Let's make this more robust
+        # Store the DataFrame
         data_file = upload_dir / "data.pkl"
-        df.to_pickle(str(data_file))  # Convert Path to string and ensure directory exists
-        print(f"Data saved to: {data_file}")  # Debug print
+        df.to_pickle(str(data_file))
 
-        output_file = "Generated_file_with_qr.csv"
-        df.to_csv(output_file, index=False)
+        # Save CSV output
+        output_file = upload_dir / "Generated_qr.csv"
+        df.to_csv(str(output_file), index=False)
 
-        return FileResponse(output_file, media_type="text/csv", filename=output_file)
+        return FileResponse(str(output_file), media_type="text/csv", filename="Generated_qr.csv")
 
     except Exception as e:
-        print(f"Upload error: {str(e)}")  # Debug print
-        return {"error": str(e)}
+        print(f"Upload error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Error processing upload: {str(e)}"}
+        )
 
-@app.get("/scan-qr/", response_class=HTMLResponse)
-async def scan_qr_interface(request: Request):
-    """Render the QR scanning interface."""
-    return templates.TemplateResponse("scan.html", {"request": request})
-
-@app.get("/get-details/")
+@app.get("/get-details/{serial_number}")
 async def get_details(serial_number: str):
-    """
-    Get the details based on the scanned QR code.
-    """
+    """Get the details based on the scanned QR code."""
     try:
-        # Look for the data file in all upload directories
         upload_dirs = sorted(Path(OUTPUT_FOLDER).glob("*"))
         if not upload_dirs:
             raise HTTPException(status_code=400, detail="No uploaded data available.")
 
-        # Search through all directories for the data
         df = None
         for dir in upload_dirs:
             data_file = dir / "data.pkl"
@@ -196,7 +177,7 @@ async def get_details(serial_number: str):
                     continue
 
         if df is None:
-            raise HTTPException(status_code=404, detail="Data file not found or serial number not found in any data file.")
+            raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
 
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
