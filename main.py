@@ -5,6 +5,10 @@ from fastapi.staticfiles import StaticFiles
 import pandas as pd
 import os
 from pathlib import Path
+from datetime import datetime
+import qrcode
+import shutil
+from typing import Optional
 
 app = FastAPI()
 
@@ -14,7 +18,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/qr_codes", StaticFiles(directory="qr_codes"), name="qr_codes")
 
 # Your Render URL (make sure it's correct)
-BASE_URL = "https://dvplates.onrender.com"  # No trailing slash
+BASE_URL = "https://dvplates.onrender.com"
 
 # Ensure directories exist
 OUTPUT_FOLDER = "qr_codes"
