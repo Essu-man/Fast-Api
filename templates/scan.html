@@ -133,8 +133,10 @@
         </div>
         <h1 class="title">Scan Result</h1>
         {% if error %}
-            <p class="error">{{ error }}</p>
-        {% else %}
+            <div class="error">
+                {{ error }}
+            </div>
+        {% elif details %}
             <div class="detail-row">
                 <span class="label">Date of Issuance</span>
                 <span class="value">{{ details.date_of_issuance }}</span>
@@ -146,6 +148,10 @@
             <div class="detail-row">
                 <span class="label">DV Number</span>
                 <span class="value">{{ details.dv_number }}</span>
+            </div>
+        {% else %}
+            <div class="error">
+                No data available
             </div>
         {% endif %}
     </div>

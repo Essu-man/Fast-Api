@@ -63,15 +63,40 @@ async def home_page(request: Request):
 async def scan_page(request: Request, serial_number: str):
     """Render the scan result page"""
     try:
+        # Debug print
+        print(f"Scanning serial number: {serial_number}")
+
+        # Get details
         details = await get_details(serial_number)
+        print(f"Found details: {details}")  # Debug print
+
         return templates.TemplateResponse(
             "scan.html",
-            {"request": request, "details": details}
+            {
+                "request": request,
+                "details": details,
+                "error": None
+            }
         )
     except HTTPException as e:
+        print(f"Error scanning: {e.detail}")  # Debug print
         return templates.TemplateResponse(
             "scan.html",
-            {"request": request, "error": e.detail}
+            {
+                "request": request,
+                "details": None,
+                "error": f"QR Code not found: {serial_number}"
+            }
+        )
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")  # Debug print
+        return templates.TemplateResponse(
+            "scan.html",
+            {
+                "request": request,
+                "details": None,
+                "error": "An unexpected error occurred"
+            }
         )
 
 @app.post("/upload-csv/")
@@ -150,43 +175,42 @@ async def upload_csv(file: UploadFile):
             content={"error": f"Error processing upload: {str(e)}"}
         )
 
-@app.get("/get-details/{serial_number}")
 async def get_details(serial_number: str):
     """Get the details based on the scanned QR code."""
     try:
-        upload_dirs = sorted(Path(OUTPUT_FOLDER).glob("*"))
-        if not upload_dirs:
-            raise HTTPException(status_code=400, detail="No uploaded data available.")
+        # Debug print
+        print(f"Looking for details of serial: {serial_number}")
 
-        # Search through all upload directories
-        df = None
-        for dir in upload_dirs:
-            data_file = dir / "data.pkl"
+        # List all directories in OUTPUT_FOLDER
+        upload_dirs = sorted(Path("qr_codes").glob("*"))
+        print(f"Found directories: {[str(d) for d in upload_dirs]}")  # Debug print
+
+        if not upload_dirs:
+            raise HTTPException(status_code=404, detail="No data available")
+
+        # Search through all directories
+        for dir_path in upload_dirs:
+            data_file = dir_path / "data.pkl"
             if data_file.exists():
                 try:
-                    temp_df = pd.read_pickle(str(data_file))
-                    if serial_number in temp_df["IN-HOUSE SERIAL NUMBER"].values:
-                        df = temp_df
-                        break
+                    df = pd.read_pickle(str(data_file))
+                    row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
+
+                    if not row.empty:
+                        print(f"Found data in {dir_path}")  # Debug print
+                        return {
+                            "date_of_issuance": row["DATE OF ISSUANCE"].iloc[0],
+                            "in_house_serial_number": row["IN-HOUSE SERIAL NUMBER"].iloc[0],
+                            "dv_number": row["DV NUMBER"].iloc[0]
+                        }
                 except Exception as e:
                     print(f"Error reading {data_file}: {e}")
                     continue
 
-        if df is None:
-            raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
-
-        row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
-
-        if row.empty:
-            raise HTTPException(status_code=404, detail="Serial number not found.")
-
-        return {
-            "date_of_issuance": row["DATE OF ISSUANCE"].values[0],
-            "in_house_serial_number": row["IN-HOUSE SERIAL NUMBER"].values[0],
-            "dv_number": row["DV NUMBER"].values[0],
-        }
+        raise HTTPException(status_code=404, detail="Serial number not found")
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
+        print(f"Error in get_details: {str(e)}")  # Debug print
+        raise HTTPException(status_code=500, detail=str(e))
