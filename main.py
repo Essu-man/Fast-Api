@@ -28,7 +28,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Use your Render URL (update this after deployment)
-BASE_URL = "https://your-app-name.onrender.com"
+BASE_URL = "https://dvplates.onrender.com/"
 
 def get_local_ip():
     try:
