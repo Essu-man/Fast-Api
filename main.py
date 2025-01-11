@@ -61,9 +61,20 @@ async def scan_page(request: Request, serial_number: str):
         )
 
 @app.get("/", response_class=HTMLResponse)
-async def get_super():
-    """Render the super.html page."""
-    return templates.TemplateResponse("super.html", {"request": {}})
+async def root(request: Request):
+    """Serve either super.html or a JSON response."""
+    if "text/html" in request.headers.get("accept", ""):
+        # Render the HTML interface
+        return templates.TemplateResponse("super.html", {"request": request})
+    else:
+        # Return the JSON response
+        ip = get_local_ip()
+        return {
+            "message": "Server is running!",
+            "local_ip": ip,
+            "test_url": f"http://{ip}:8000/test"
+        }
+
 
 @app.post("/upload-csv/")
 async def upload_csv(file: UploadFile):
@@ -190,13 +201,3 @@ async def get_details(serial_number: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
-
-@app.get("/")
-async def root():
-    """Test endpoint to verify server is running"""
-    ip = get_local_ip()
-    return {
-        "message": "Server is running!",
-        "local_ip": ip,
-        "test_url": f"http://{ip}:8000/test"
-    }
