@@ -4,48 +4,6 @@
     <title>QR Scan Result</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-
-.logo-container {
-        text-align: center;
-        margin-bottom: 20px;
-        /* Add padding if needed */
-        padding: 10px;
-    }
-
-    .logo {
-        /* Option 1: Fixed width and height */
-        width: 120px;  /* Adjust this value */
-        height: auto;  /* Maintains aspect ratio */
-
-        /* Option 2: Using max-width for responsive sizing */
-        max-width: 150px;  /* Adjust this value */
-
-        /* Option 3: Using percentage of container */
-        width: 40%;  /* Adjust percentage as needed */
-
-        /* Optional: Add some spacing */
-        margin-bottom: 15px;
-
-        /* Optional: Add subtle shadow */
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-
-        /* Optional: Smooth transition for hover effect */
-        transition: transform 0.3s ease;
-    }
-
-    /* Optional: Hover effect */
-    .logo:hover {
-        transform: scale(1.05);
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 480px) {
-        .logo {
-            width: 100px;  /* Smaller size on mobile */
-            /* or */
-            max-width: 30%;  /* Percentage-based on mobile */
-        }
-    }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -124,6 +82,24 @@
                 padding: 12px;
             }
         }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            max-width: 150px;  /* Adjust size as needed */
+            height: auto;
+            margin-bottom: 15px;
+        }
+
+        /* If you want the logo to have a subtle animation */
+        .logo {
+            transition: transform 0.3s ease;
+        }
+        .logo:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -133,10 +109,8 @@
         </div>
         <h1 class="title">Scan Result</h1>
         {% if error %}
-            <div class="error">
-                {{ error }}
-            </div>
-        {% elif details %}
+            <p class="error">{{ error }}</p>
+        {% else %}
             <div class="detail-row">
                 <span class="label">Date of Issuance</span>
                 <span class="value">{{ details.date_of_issuance }}</span>
@@ -148,10 +122,6 @@
             <div class="detail-row">
                 <span class="label">DV Number</span>
                 <span class="value">{{ details.dv_number }}</span>
-            </div>
-        {% else %}
-            <div class="error">
-                No data available
             </div>
         {% endif %}
     </div>
