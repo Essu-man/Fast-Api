@@ -16,8 +16,8 @@ from pyngrok import ngrok
 
 app = FastAPI()
 
-# Update the base URL to your Vercel URL once deployed
-BASE_URL = "https://your-project-name.vercel.app"  # You'll get this URL after deploying
+# Get the base URL from environment or use a default
+BASE_URL = os.getenv('RENDER_EXTERNAL_URL', 'http://localhost:8000')
 
 # Setup templates for rendering HTML
 templates = Jinja2Templates(directory="templates")
@@ -121,7 +121,7 @@ async def upload_csv(file: UploadFile):
                 content={"error": "Could not generate public URL"}
             )
 
-        # Use Vercel URL for QR codes
+        # Use BASE_URL for QR codes
         base_url = f"{BASE_URL}/scan/"
         print(f"QR Code base URL: {base_url}")
 
