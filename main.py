@@ -129,8 +129,8 @@ async def upload_csv(file: UploadFile):
 
                 # Save QR code
                 qr_img = qr.make_image(fill_color="black", back_color="white")
-                qr_filename = f"{OUTPUT_FOLDER}/qr_{serial_number}.png"
-                qr_img.save(qr_filename)
+                qr_filename = upload_dir / f"qr_{serial_number}.png"
+                qr_img.save(str(qr_filename))
                 print(f"Saved QR code to: {qr_filename}")  # Debug print
 
             except Exception as row_error:
@@ -140,8 +140,10 @@ async def upload_csv(file: UploadFile):
         # Save the updated CSV with QR codes links
         df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(lambda x: f"/qr_codes/qr_{x}.png")
 
-        # Store the DataFrame in a file instead of global variable
-        df.to_pickle(upload_dir / "data.pkl")
+        # Store the DataFrame in a file - Let's make this more robust
+        data_file = upload_dir / "data.pkl"
+        df.to_pickle(str(data_file))  # Convert Path to string and ensure directory exists
+        print(f"Data saved to: {data_file}")  # Debug print
 
         output_file = "Generated_file_with_qr.csv"
         df.to_csv(output_file, index=False)
@@ -155,7 +157,7 @@ async def upload_csv(file: UploadFile):
 @app.get("/scan-qr/", response_class=HTMLResponse)
 async def scan_qr_interface(request: Request):
     """Render the QR scanning interface."""
-    return templates.TemplateResponse("scan_qr.html", {"request": request})
+    return templates.TemplateResponse("scan.html", {"request": request})
 
 @app.get("/get-details/")
 async def get_details(serial_number: str):
@@ -163,18 +165,28 @@ async def get_details(serial_number: str):
     Get the details based on the scanned QR code.
     """
     try:
-        # Look for the data file in the most recent upload directory
+        # Look for the data file in all upload directories
         upload_dirs = sorted(Path(OUTPUT_FOLDER).glob("*"))
         if not upload_dirs:
             raise HTTPException(status_code=400, detail="No uploaded data available.")
 
-        latest_dir = upload_dirs[-1]
-        data_file = latest_dir / "data.pkl"
+        # Search through all directories for the data
+        df = None
+        for dir in upload_dirs:
+            data_file = dir / "data.pkl"
+            if data_file.exists():
+                try:
+                    temp_df = pd.read_pickle(str(data_file))
+                    if serial_number in temp_df["IN-HOUSE SERIAL NUMBER"].values:
+                        df = temp_df
+                        break
+                except Exception as e:
+                    print(f"Error reading {data_file}: {e}")
+                    continue
 
-        if not data_file.exists():
-            raise HTTPException(status_code=400, detail="Data file not found.")
+        if df is None:
+            raise HTTPException(status_code=404, detail="Data file not found or serial number not found in any data file.")
 
-        df = pd.read_pickle(data_file)
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
         if row.empty:
