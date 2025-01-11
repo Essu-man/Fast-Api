@@ -47,15 +47,22 @@ def generate_code():
     formatted_code = '-'.join([raw_code[i:i+5] for i in range(0, len(raw_code), 5)])
     return formatted_code
 
-@app.get("/")
-async def root():
+# API health check endpoint
+@app.get("/api/health")
+async def health_check():
     return {"message": "API is running"}
 
-@app.get("/scan/{serial_number}")
+# Main page endpoint
+@app.get("/", response_class=HTMLResponse)
+async def home_page(request: Request):
+    """Render the main upload page"""
+    return templates.TemplateResponse("super.html", {"request": request})
+
+# Scan endpoint
+@app.get("/scan/{serial_number}", response_class=HTMLResponse)
 async def scan_page(request: Request, serial_number: str):
     """Render the scan result page"""
     try:
-        # Get details directly using the serial number
         details = await get_details(serial_number)
         return templates.TemplateResponse(
             "scan.html",
@@ -66,11 +73,6 @@ async def scan_page(request: Request, serial_number: str):
             "scan.html",
             {"request": request, "error": e.detail}
         )
-
-@app.get("/", response_class=HTMLResponse)
-async def get_super():
-    """Render the super.html page."""
-    return templates.TemplateResponse("super.html", {"request": {}})
 
 @app.post("/upload-csv/")
 async def upload_csv(file: UploadFile):

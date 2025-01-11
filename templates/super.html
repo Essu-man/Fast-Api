@@ -3,82 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload CSV</title>
+    <title>Dv Plates</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+        /* Reset and Global Styles */
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            background: linear-gradient(135deg, #28a745, #20c997);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            color: #fff;
         }
+        /* Container Styles */
         .container {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
             text-align: center;
             width: 90%;
-            max-width: 400px;
+            max-width: 450px;
+            overflow: hidden;
         }
+        /* Logo Section */
+        .logo-container {
+            width: 100%;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .logo {
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        .logo:hover {
+            transform: scale(1.05);
+        }
+        /* Header and Text */
         h1 {
-            font-size: 24px;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
             color: #333;
+        }
+        p {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #666;
+        }
+        /* File Input Styling */
+        .file-input {
+            position: relative;
+            overflow: hidden;
             margin-bottom: 20px;
         }
-        input[type="file"] {
-            display: block;
-            margin: 10px auto 20px;
-            font-size: 14px;
+        .file-input input[type="file"] {
+            font-size: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            z-index: -1;
         }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 16px;
+        .file-input label {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #28a745;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 14px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .file-input label:hover {
+            background-color: #218838;
+        }
+        /* Button Styling */
+        button {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            color: #fff;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         button:hover {
-            background-color: #45a049;
+            transform: scale(1.05);
         }
+        /* Download Section */
+        .download-section {
+            margin-top: 25px;
+        }
+        .download-section a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #28a745;
+            font-weight: bold;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .download-section a:hover {
+            color: #218838;
+        }
+        /* Footer Styling */
         footer {
             margin-top: 20px;
             font-size: 12px;
-            color: #777;
+            color: #999;
         }
-        .download-section {
-            margin-top: 30px;
-        }
-        .download-section a {
-            display: block;
-            margin: 10px 0;
-            color: #4CAF50;
-            text-decoration: none;
-        }
-        .download-section a:hover {
-            text-decoration: underline;
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .container {
+                width: 95%;
+                padding: 20px;
+            }
+            .logo {
+                width: 100px;
+            }
+            h1 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Upload CSV to Generate Codes</h1>
+        <!-- Logo -->
+        <div class="logo-container">
+            <img src="{{ url_for('static', path='oop.png') }}" alt="Company Logo" class="logo">
+        </div>
+
+        <h1> Generate Codes</h1>
+        <p>Upload your CSV file and generate unique QR codes instantly!</p>
+
+        <!-- File Upload Form -->
         <form action="/upload-csv/" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".csv" required>
+            <div class="file-input">
+                <input type="file" name="file" id="file" accept=".csv" required>
+                <label for="file">Choose CSV File</label>
+            </div>
             <button type="submit">Upload</button>
         </form>
 
-        <!-- Section for Downloading the Processed CSV with QR Code Links -->
+        <!-- Download Section -->
         <div class="download-section">
             {% if file_download_url %}
                 <h2>Download Processed CSV</h2>
-                <a href="{{ file_download_url }}" download>Click here to download the CSV with QR codes</a>
+                <a href="{{ file_download_url }}" download>Download CSV with QR Codes</a>
             {% endif %}
         </div>
 
