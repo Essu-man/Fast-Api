@@ -55,6 +55,7 @@ async def root():
 async def scan_page(request: Request, serial_number: str):
     """Render the scan result page"""
     try:
+        # Get details directly using the serial number
         details = await get_details(serial_number)
         return templates.TemplateResponse(
             "scan.html",
@@ -98,24 +99,16 @@ async def upload_csv(file: UploadFile):
         df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
         df["DATE OF ISSUANCE"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Use the Render URL for QR codes
-        base_url = f"{BASE_URL}/scan/"
-        print(f"Using base URL: {base_url}")
-
-        # Generate QR codes for each row
+        # Generate QR codes with full Render URL
         for index, row in df.iterrows():
             try:
                 serial_number = str(row["IN-HOUSE SERIAL NUMBER"]).strip()
-                print(f"Processing Serial Number: {serial_number}")
 
-                if not serial_number:
-                    print("Warning: Empty serial number found")
-                    continue
-
-                qr_data = base_url + serial_number
+                # Create full URL for QR code
+                qr_data = f"{BASE_URL}/scan/{serial_number}"
                 print(f"QR Data URL: {qr_data}")
 
-                # Create QR code
+                # Create and save QR code
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -125,18 +118,18 @@ async def upload_csv(file: UploadFile):
                 qr.add_data(qr_data)
                 qr.make(fit=True)
 
-                # Save QR code
                 qr_img = qr.make_image(fill_color="black", back_color="white")
                 qr_filename = upload_dir / f"qr_{serial_number}.png"
                 qr_img.save(str(qr_filename))
-                print(f"Saved QR code to: {qr_filename}")
 
             except Exception as row_error:
                 print(f"Error processing row: {row_error}")
                 continue
 
-        # Save the updated CSV with QR codes links
-        df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(lambda x: f"/qr_codes/{upload_id}/qr_{x}.png")
+        # Update CSV with full URLs for QR codes
+        df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(
+            lambda x: f"{BASE_URL}/qr_codes/{upload_id}/qr_{x}.png"
+        )
 
         # Store the DataFrame
         data_file = upload_dir / "data.pkl"
@@ -163,6 +156,7 @@ async def get_details(serial_number: str):
         if not upload_dirs:
             raise HTTPException(status_code=400, detail="No uploaded data available.")
 
+        # Search through all upload directories
         df = None
         for dir in upload_dirs:
             data_file = dir / "data.pkl"
