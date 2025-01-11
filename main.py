@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Optional
 from pathlib import Path
 import socket
+from pyngrok import ngrok
 
 app = FastAPI()
 
@@ -44,6 +45,16 @@ def generate_code():
     raw_code = ''.join(random.choices(string.hexdigits.upper(), k=15))
     formatted_code = '-'.join([raw_code[i:i+5] for i in range(0, len(raw_code), 5)])
     return formatted_code
+
+def get_public_url():
+    try:
+        # Start ngrok
+        public_url = ngrok.connect(8000)
+        print(f"Public URL: {public_url}")
+        return public_url.public_url
+    except Exception as e:
+        print(f"Error setting up ngrok: {e}")
+        return None
 
 @app.get("/scan/{serial_number}")
 async def scan_page(request: Request, serial_number: str):
@@ -99,28 +110,27 @@ async def upload_csv(file: UploadFile):
         df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
         df["DATE OF ISSUANCE"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Get local IP for QR code URLs
-        local_ip = get_local_ip()
-        base_url = f"http://{local_ip}:8000/scan/"
-        print(f"Base URL: {base_url}")  # Debug print
+        # Get public URL instead of local IP
+        public_url = get_public_url()
+        if not public_url:
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Could not generate public URL"}
+            )
 
-        # Generate QR codes for each row
+        base_url = f"{public_url}/scan/"
+        print(f"QR Code base URL: {base_url}")
+
+        # Generate QR codes with public URL
         for index, row in df.iterrows():
             try:
                 serial_number = str(row["IN-HOUSE SERIAL NUMBER"]).strip()
-                print(f"Processing Serial Number: {serial_number}")  # Debug print
-
-                if not serial_number:
-                    print("Warning: Empty serial number found")
-                    continue
-
                 qr_data = base_url + serial_number
-                print(f"QR Data URL: {qr_data}")  # Debug print
 
                 # Create QR code
                 qr = qrcode.QRCode(
                     version=1,
-                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    error_correction=qrcode.constants.ERROR_CORRECT_H,
                     box_size=10,
                     border=4,
                 )
@@ -129,12 +139,11 @@ async def upload_csv(file: UploadFile):
 
                 # Save QR code
                 qr_img = qr.make_image(fill_color="black", back_color="white")
-                qr_filename = upload_dir / f"qr_{serial_number}.png"
-                qr_img.save(str(qr_filename))
-                print(f"Saved QR code to: {qr_filename}")  # Debug print
+                qr_filename = f"{OUTPUT_FOLDER}/qr_{serial_number}.png"
+                qr_img.save(qr_filename)
 
             except Exception as row_error:
-                print(f"Error processing row: {row_error}")  # Debug print
+                print(f"Error processing row: {row_error}")
                 continue
 
         # Save the updated CSV with QR codes links
