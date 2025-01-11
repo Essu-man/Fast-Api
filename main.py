@@ -16,8 +16,8 @@ from pyngrok import ngrok
 
 app = FastAPI()
 
-# Get the base URL from environment or use a default
-BASE_URL = os.getenv('RENDER_EXTERNAL_URL', 'http://localhost:8000')
+# Use your Render URL
+BASE_URL = "https://your-app-name.onrender.com"  # Replace with your actual Render URL
 
 # Setup templates for rendering HTML
 templates = Jinja2Templates(directory="templates")
