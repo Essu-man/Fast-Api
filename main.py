@@ -61,20 +61,9 @@ async def scan_page(request: Request, serial_number: str):
         )
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    """Serve either super.html or a JSON response."""
-    if "text/html" in request.headers.get("accept", ""):
-        # Render the HTML interface
-        return templates.TemplateResponse("super.html", {"request": request})
-    else:
-        # Return the JSON response
-        ip = get_local_ip()
-        return {
-            "message": "Server is running!",
-            "local_ip": ip,
-            "test_url": f"http://{ip}:8000/test"
-        }
-
+async def get_super(request: Request):
+    """Render the super.html page."""
+    return templates.TemplateResponse("super.html", {"request": request})
 
 @app.post("/upload-csv/")
 async def upload_csv(file: UploadFile):
@@ -118,22 +107,23 @@ async def upload_csv(file: UploadFile):
                     print("Warning: Empty serial number found")
                     continue
 
-                if not serial_number.isalnum():  # Check if it contains only letters and numbers
-                    print(f"Warning: Invalid serial number format: {serial_number}")
-                    serial_number = ''.join(e for e in serial_number if e.isalnum())
-
                 qr_data = base_url + serial_number
                 print(f"QR Data URL: {qr_data}")
 
                 # Create QR code
-                qr = qrcode.QRCode(version=1, box_size=10, border=5)
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=4,
+                )
                 qr.add_data(qr_data)
                 qr.make(fit=True)
 
                 # Save QR code
                 qr_img = qr.make_image(fill_color="black", back_color="white")
-                qr_filename = f"{OUTPUT_FOLDER}/qr_{serial_number}.png"
-                qr_img.save(qr_filename)
+                qr_filename = upload_dir / f"qr_{serial_number}.png"
+                qr_img.save(str(qr_filename))
                 print(f"Saved QR code to: {qr_filename}")
 
             except Exception as row_error:
