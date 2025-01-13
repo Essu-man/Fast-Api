@@ -140,6 +140,19 @@
                 font-size: 24px;
             }
         }
+        /* Add these new styles for file preview */
+        .file-name {
+            margin-top: 10px;
+            color: #28a745;
+            font-size: 14px;
+            display: none;  /* Hidden by default */
+        }
+
+        .preview-text {
+            margin-top: 5px;
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -149,14 +162,16 @@
             <img src="{{ url_for('static', path='oop.png') }}" alt="Company Logo" class="logo">
         </div>
 
-        <h1> Generate Codes</h1>
+        <h1>Generate Codes</h1>
         <p>Upload your CSV file and generate unique QR codes instantly!</p>
 
         <!-- File Upload Form -->
         <form action="/upload-csv/" method="post" enctype="multipart/form-data">
             <div class="file-input">
-                <input type="file" name="file" id="file" accept=".csv" required>
+                <input type="file" name="file" id="file" accept=".csv" required onchange="showFileName(this)">
                 <label for="file">Choose CSV File</label>
+                <div id="fileName" class="file-name"></div>
+                <div id="previewText" class="preview-text"></div>
             </div>
             <button type="submit">Upload</button>
         </form>
@@ -171,5 +186,33 @@
 
         <footer>Supported file format: CSV</footer>
     </div>
+
+    <script>
+        function showFileName(input) {
+            const fileNameDiv = document.getElementById('fileName');
+            const previewText = document.getElementById('previewText');
+
+            if (input.files && input.files[0]) {
+                const fileName = input.files[0].name;
+                fileNameDiv.style.display = 'block';
+                fileNameDiv.innerHTML = `Selected file: ${fileName}`;
+
+                // Show file size
+                const fileSize = (input.files[0].size / 1024).toFixed(2);
+                previewText.innerHTML = `Size: ${fileSize} KB`;
+
+                // Validate file type
+                if (!fileName.toLowerCase().endsWith('.csv')) {
+                    previewText.innerHTML += '<br>Warning: Please select a CSV file';
+                    previewText.style.color = '#dc3545';
+                } else {
+                    previewText.style.color = '#666';
+                }
+            } else {
+                fileNameDiv.style.display = 'none';
+                previewText.innerHTML = '';
+            }
+        }
+    </script>
 </body>
 </html>
