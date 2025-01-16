@@ -10,12 +10,18 @@ import qrcode
 import shutil
 from datetime import datetime
 from typing import Optional
+from dotenv import load_dotenv
 from pathlib import Path
 
 app = FastAPI()
 
+### initialize loading of environmental variable from .env
+load_dotenv()
+
 # Production URL
-BASE_URL = "https://bo.dila.generisdevelopers.com"
+BASE_URL = os.getenv('BASE_URL')
+
+print(f"app base url : {BASE_URL}")
 
 # Setup templates for rendering HTML
 templates = Jinja2Templates(directory="templates")
