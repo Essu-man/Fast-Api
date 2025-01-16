@@ -15,6 +15,9 @@ import socket
 
 app = FastAPI()
 
+# Update the base URL for production
+BASE_URL = "https://bo.dila.generisdevelopers.com"
+
 # Setup templates for rendering HTML
 templates = Jinja2Templates(directory="templates")
 
@@ -59,7 +62,7 @@ def read_file(file: UploadFile) -> pd.DataFrame:
         # Clean column names
         df.columns = df.columns.str.strip()
 
-        # Format Form D numbers: handle NaN values, remove decimal and add leading zero
+        # Format Form D numbers: handle NaN values and add leading zero
         if "FORM D" in df.columns:
             df["FORM D"] = df["FORM D"].apply(
                 lambda x: f"0{int(float(x))}" if pd.notna(x) else ""
@@ -141,10 +144,9 @@ async def upload_csv(file: UploadFile):
             df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
             df["EXPIRY DATE"] = "31/12/2025"
 
-            # Get local IP for QR code URLs
-            local_ip = get_local_ip()
-            base_url = f"http://{local_ip}:8000/scan/"
-            print(f"Using local URL: {base_url}")
+            # Use production URL for QR codes instead of local IP
+            base_url = f"{BASE_URL}/scan/"
+            print(f"Using production URL: {base_url}")
 
             # Generate QR codes for each row
             for index, row in df.iterrows():
@@ -235,11 +237,6 @@ async def get_details(serial_number: str):
             if data_file.exists():
                 try:
                     temp_df = pd.read_pickle(str(data_file))
-                    # Debug print
-                    print(f"Looking for serial number: {serial_number}")
-                    print(f"Columns in DataFrame: {temp_df.columns.tolist()}")
-                    print(f"Sample data:\n{temp_df.head()}")
-
                     if serial_number in temp_df["IN-HOUSE SERIAL NUMBER"].values:
                         df = temp_df
                         break
@@ -252,22 +249,19 @@ async def get_details(serial_number: str):
 
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
-        # Debug print
-        print(f"Found row data: {row.to_dict('records')}")
-
         if row.empty:
             raise HTTPException(status_code=404, detail="Serial number not found.")
 
-        # Convert values to string to avoid nan
         return {
             "dv_number": str(row["DV NUMBER"].iloc[0]) if not pd.isna(row["DV NUMBER"].iloc[0]) else "",
             "in_house_serial_number": str(row["IN-HOUSE SERIAL NUMBER"].iloc[0]),
             "form_d": str(row["FORM D"].iloc[0]) if not pd.isna(row["FORM D"].iloc[0]) else "",
             "expiry_date": str(row["EXPIRY DATE"].iloc[0]) if not pd.isna(row["EXPIRY DATE"].iloc[0]) else "",
+            "serial_number": str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in get_details: {str(e)}")  # Debug print
+        print(f"Error in get_details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
