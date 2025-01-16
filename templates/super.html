@@ -163,7 +163,7 @@
         </div>
 
         <h1>Generate Codes</h1>
-        <p>Upload your CSV file and generate unique QR codes instantly!</p>
+        <p>Upload CSV file and generate QR codes!</p>
 
         <!-- File Upload Form -->
         <form action="/upload-csv/" method="post" enctype="multipart/form-data">
@@ -200,14 +200,7 @@
                 // Show file size
                 const fileSize = (input.files[0].size / 1024).toFixed(2);
                 previewText.innerHTML = `Size: ${fileSize} KB`;
-
-                // Validate file type
-                if (!fileName.toLowerCase().endsWith('.csv')) {
-                    previewText.innerHTML += '<br>Warning: Please select a CSV file';
-                    previewText.style.color = '#dc3545';
-                } else {
-                    previewText.style.color = '#666';
-                }
+                previewText.style.color = '#666';
             } else {
                 fileNameDiv.style.display = 'none';
                 previewText.innerHTML = '';
