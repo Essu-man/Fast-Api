@@ -11,11 +11,10 @@ import shutil
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
-import socket
 
 app = FastAPI()
 
-# Update the base URL for production
+# Production URL
 BASE_URL = "https://bo.dila.generisdevelopers.com"
 
 # Setup templates for rendering HTML
@@ -30,16 +29,6 @@ UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "qr_codes"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "localhost"
 
 def generate_code():
     """Generate a formatted random alphanumeric hexadecimal code with hyphens."""
@@ -144,7 +133,7 @@ async def upload_csv(file: UploadFile):
             df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
             df["EXPIRY DATE"] = "31/12/2025"
 
-            # Use production URL for QR codes instead of local IP
+            # Use HTTPS production URL for QR codes
             base_url = f"{BASE_URL}/scan/"
             print(f"Using production URL: {base_url}")
 
@@ -162,6 +151,7 @@ async def upload_csv(file: UploadFile):
                         continue
 
                     qr_data = base_url + serial_number
+                    print(f"QR Data URL: {qr_data}")
 
                     # Create QR code
                     qr = qrcode.QRCode(
@@ -182,9 +172,9 @@ async def upload_csv(file: UploadFile):
                     print(f"Error processing row: {row_error}")
                     continue
 
-            # Add QR code links
+            # Add QR code links with HTTPS
             df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(
-                lambda x: f"/qr_codes/{upload_id}/qr_{x}.png"
+                lambda x: f"{BASE_URL}/qr_codes/{upload_id}/qr_{x}.png"
             )
 
             # Store the DataFrame
