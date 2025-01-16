@@ -10,6 +10,7 @@ import qrcode
 import shutil
 from datetime import datetime
 from typing import Optional
+from dotenv import load_dotenv
 from pathlib import Path
 
 app = FastAPI()
