@@ -12,7 +12,6 @@ from datetime import datetime
 from typing import Optional
 from pathlib import Path
 import socket
-import openpyxl
 
 app = FastAPI()
 
@@ -31,7 +30,6 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 def get_local_ip():
     try:
-        # Get the local IP address
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
@@ -50,12 +48,33 @@ def read_file(file: UploadFile) -> pd.DataFrame:
     """Read either CSV or Excel file into a DataFrame"""
     file_extension = file.filename.lower()
 
-    if file_extension.endswith('.csv'):
-        return pd.read_csv(file.file)
-    elif file_extension.endswith(('.xlsx', '.xls')):
-        return pd.read_excel(file.file)
-    else:
-        raise ValueError("Unsupported file format. Please upload CSV or Excel file.")
+    try:
+        if file_extension.endswith('.csv'):
+            df = pd.read_csv(file.file)
+        elif file_extension.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(file.file)
+        else:
+            raise ValueError("Unsupported file format. Please upload CSV or Excel file.")
+
+        # Clean column names
+        df.columns = df.columns.str.strip()
+
+        # Format Form D numbers: handle NaN values, remove decimal and add leading zero
+        if "FORM D" in df.columns:
+            df["FORM D"] = df["FORM D"].apply(
+                lambda x: f"0{int(float(x))}" if pd.notna(x) else ""
+            )
+
+        print("=== DataFrame Debug Info ===")
+        print(f"Columns: {df.columns.tolist()}")
+        print("\nFirst few rows after formatting:")
+        print(df.head())
+
+        return df
+
+    except Exception as e:
+        print(f"Error reading file: {str(e)}")
+        raise
 
 @app.get("/scan/{serial_number}")
 async def scan_page(request: Request, serial_number: str):
@@ -96,15 +115,21 @@ async def upload_csv(file: UploadFile):
         try:
             # Load file into DataFrame
             df = read_file(file)
-            print(f"Original columns: {df.columns.tolist()}")
+            print(f"Columns after cleaning: {df.columns.tolist()}")
+
+            # Clean column names
+            df.columns = df.columns.str.strip()
 
             # Check for required columns
-            if "DV NUMBER" not in df.columns or "FORM D" not in df.columns:
-                missing_columns = []
-                if "DV NUMBER" not in df.columns:
-                    missing_columns.append("DV NUMBER")
-                if "FORM D" not in df.columns:
-                    missing_columns.append("FORM D")
+            required_columns = {"DV NUMBER", "FORM D"}
+            current_columns = {col.strip().upper() for col in df.columns}
+
+            missing_columns = []
+            for col in required_columns:
+                if col not in current_columns:
+                    missing_columns.append(col)
+
+            if missing_columns:
                 return JSONResponse(
                     status_code=400,
                     content={
@@ -112,18 +137,14 @@ async def upload_csv(file: UploadFile):
                     }
                 )
 
-            # Clean existing data
-            df["DV NUMBER"] = df["DV NUMBER"].astype(str).str.strip()
-            df["FORM D"] = df["FORM D"].astype(str).str.strip()
-
-            # Only generate new columns that don't exist
+            # Generate "In-house serial number" for each row
             df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
-            df["EXPIRY DATE"] = "01/12/2024"
+            df["EXPIRY DATE"] = "31/12/2025"
 
-            print(f"Processed data:\n{df.head()}")
-
-            # Use the DILA Generis URL
-            base_url = f"{BASE_URL}/scan/"
+            # Get local IP for QR code URLs
+            local_ip = get_local_ip()
+            base_url = f"http://{local_ip}:8000/scan/"
+            print(f"Using local URL: {base_url}")
 
             # Generate QR codes for each row
             for index, row in df.iterrows():
@@ -171,20 +192,19 @@ async def upload_csv(file: UploadFile):
             # Save output file
             if file_extension.endswith('.xlsx'):
                 output_file = upload_dir / "Generated_qr.xlsx"
-                df.to_excel(str(output_file), index=False)
+                df.to_excel(str(output_file), index=False, engine='openpyxl')
+                media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             else:
                 output_file = upload_dir / "Generated_qr.csv"
                 df.to_csv(str(output_file), index=False)
+                media_type = "text/csv"
 
-            print(f"Final columns in output: {df.columns.tolist()}")
-            print(f"Sample of final data:\n{df.head()}")
+            print(f"Saving output file to: {output_file}")
 
             return FileResponse(
-                str(output_file),
-                filename=f"Generated_qr{file_extension}",
-                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    if file_extension.endswith('.xlsx')
-                    else "text/csv"
+                path=str(output_file),
+                filename=output_file.name,
+                media_type=media_type
             )
 
         except Exception as e:
