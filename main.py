@@ -247,7 +247,7 @@ async def get_details(serial_number: str):
             "in_house_serial_number": str(row["IN-HOUSE SERIAL NUMBER"].iloc[0]),
             "form_d": str(row["FORM D"].iloc[0]) if not pd.isna(row["FORM D"].iloc[0]) else "",
             "expiry_date": str(row["EXPIRY DATE"].iloc[0]) if not pd.isna(row["EXPIRY DATE"].iloc[0]) else "",
-            "serial_number": str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
+            "factory_serial_number": str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
         }
 
     except HTTPException:
