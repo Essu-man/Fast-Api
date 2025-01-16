@@ -168,8 +168,8 @@
         <!-- File Upload Form -->
         <form action="/upload-csv/" method="post" enctype="multipart/form-data">
             <div class="file-input">
-                <input type="file" name="file" id="file" accept=".csv" required onchange="showFileName(this)">
-                <label for="file">Choose CSV File</label>
+                <input type="file" name="file" id="file" accept=".csv,.xlsx,.xls" required onchange="showFileName(this)">
+                <label for="file">Choose File</label>
                 <div id="fileName" class="file-name"></div>
                 <div id="previewText" class="preview-text"></div>
             </div>
@@ -184,7 +184,7 @@
             {% endif %}
         </div>
 
-        <footer>Supported file format: CSV</footer>
+        <footer>Supported file formats: CSV, Excel (.xlsx, .xls)</footer>
     </div>
 
     <script>
