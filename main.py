@@ -242,7 +242,16 @@ async def get_details(serial_number: str):
                     continue
 
         if df is None:
-            raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
+            # Fallback to read from the generated file stored in the database
+            generated_file = dir / "Generated_file.csv"
+            if generated_file.exists():
+                try:
+                    df = pd.read_csv(str(generated_file))
+                    if serial_number not in df["IN-HOUSE SERIAL NUMBER"].values:
+                        raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
+                except Exception as e:
+                    print(f"Error reading {generated_file}: {e}")
+                    raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
 
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
@@ -262,7 +271,6 @@ async def get_details(serial_number: str):
     except Exception as e:
         print(f"Error in get_details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
-
 @app.get("/details/{serial_number}")
 async def show_details(request: Request, serial_number: str):
     """Show details page directly."""
