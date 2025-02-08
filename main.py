@@ -12,6 +12,18 @@ from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
 from pathlib import Path
+import logging
+import uuid
+
+
+### configuration setting for logging to file 
+logging.basicConfig(format='%(asctime)s %(levelname)s %(module)s %(funcName)s %(message)s', filename="logs/app.log")
+logger = logging.getLogger()
+logger.setLevel(logging.NOTSET)
+
+console = logging.StreamHandler()
+console.setLevel(logging.NOTSET)
+logging.getLogger("").addHandler(console)
 
 app = FastAPI()
 
