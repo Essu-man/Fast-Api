@@ -12,7 +12,8 @@ from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
 from pathlib import Path
-
+from openpyxl import load_workbook
+import traceback
 app = FastAPI()
 
 ### initialize loading of environmental variable from .env
@@ -241,8 +242,16 @@ async def get_details(serial_number: str):
                     print(f"Error reading {data_file}: {e}")
                     continue
 
-        if df is None:
-            raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
+      if df is None:
+            generated_file = dir / "Generated_qr.csv"
+            if generated_file.exists():
+                try:
+                    df = pd.read_csv(str(generated_file))
+                    if serial_number not in df["IN-HOUSE SERIAL NUMBER"].values:
+                        raise HTTPException(status_code=404, detail="Serial number not found .")
+                except Exception as e:
+                    print(f"Error reading {generated_file}: {e}")
+                    raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
 
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
@@ -261,6 +270,7 @@ async def get_details(serial_number: str):
         raise
     except Exception as e:
         print(f"Error in get_details: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
 
 @app.get("/details/{serial_number}")
