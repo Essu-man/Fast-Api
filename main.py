@@ -139,13 +139,14 @@ async def upload_csv(file: UploadFile):
                 if col not in current_columns:
                     missing_columns.append(col)
 
-            if missing_columns:
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": f"Missing required columns: {', '.join(missing_columns)}. Found columns: {df.columns.tolist()}"
-                    }
-                )
+            if not missing_columns:
+                # Store the file as is
+                output_path = upload_dir / file.filename
+                if file_extension.endswith('.csv'):
+                    df.to_csv(output_path, index=False)
+                else:
+                    df.to_excel(output_path, index=False)
+                return {"detail": "File uploaded and stored successfully."}
 
             # Generate "In-house serial number" for each row
             df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
