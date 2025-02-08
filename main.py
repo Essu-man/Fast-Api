@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import FastAPI, UploadFile, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -41,7 +41,6 @@ def generate_code():
     raw_code = ''.join(random.choices(string.hexdigits.upper(), k=15))
     formatted_code = '-'.join([raw_code[i:i+5] for i in range(0, len(raw_code), 5)])
     return formatted_code
-    
 
 def read_file(file: UploadFile) -> pd.DataFrame:
     """Read either CSV or Excel file into a DataFrame"""
@@ -96,7 +95,7 @@ async def get_super(request: Request):
     return templates.TemplateResponse("super.html", {"request": request})
 
 @app.post("/upload-csv/")
-async def upload_csv(file: UploadFile = File(...)):
+async def upload_csv(file: UploadFile):
     try:
         # Check file extension
         file_extension = file.filename.lower()
@@ -108,7 +107,7 @@ async def upload_csv(file: UploadFile = File(...)):
 
         # Create a unique directory for this upload
         upload_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        upload_dir = Path(OUTPUT_FOLDER) / "qrcodes" / upload_id
+        upload_dir = Path(OUTPUT_FOLDER) / upload_id
         upload_dir.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -120,7 +119,7 @@ async def upload_csv(file: UploadFile = File(...)):
             df.columns = df.columns.str.strip()
 
             # Check for required columns
-            required_columns = {"DV NUMBER", "FORM D", "IN-HOUSE SERIAL NUMBER", "EXPIRY DATE", "SERIAL NUMBER"}
+            required_columns = {"DV NUMBER", "FORM D"}
             current_columns = {col.strip().upper() for col in df.columns}
 
             missing_columns = []
@@ -128,41 +127,17 @@ async def upload_csv(file: UploadFile = File(...)):
                 if col not in current_columns:
                     missing_columns.append(col)
 
-            if not missing_columns:
-                # Store the file as is
-                output_path = upload_dir / file.filename
-                if file_extension.endswith('.csv'):
-                    df.to_csv(output_path, index=False)
-                else:
-                    df.to_excel(output_path, index=False)
-
-                # Store the DataFrame as data.pkl
-                data_file = upload_dir / "data.pkl"
-                df.to_pickle(str(data_file))
-
-                # Save the output file as Generated_qr.csv or Generated_qr.xlsx
-                if file_extension.endswith('.xlsx'):
-                    output_file = upload_dir / "Generated_qr.xlsx"
-                    df.to_excel(str(output_file), index=False, engine='openpyxl')
-                    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                else:
-                    output_file = upload_dir / "Generated_qr.csv"
-                    df.to_csv(str(output_file), index=False)
-                    media_type = "text/csv"
-
-                print(f"Saving output file to: {output_file}")
-
-                return FileResponse(
-                    path=str(output_file),
-                    filename=output_file.name,
-                    media_type=media_type
+            if missing_columns:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": f"Missing required columns: {', '.join(missing_columns)}. Found columns: {df.columns.tolist()}"
+                    }
                 )
 
-            # Generate missing columns
-            if "IN-HOUSE SERIAL NUMBER" not in df.columns:
-                df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
-            if "EXPIRY DATE" not in df.columns:
-                df["EXPIRY DATE"] = "31/12/2025"
+            # Generate "In-house serial number" for each row
+            df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
+            df["EXPIRY DATE"] = "31/12/2025"
 
             # Use HTTPS production URL for direct links
             base_url = f"{BASE_URL}/"  # Direct root URL
@@ -267,16 +242,7 @@ async def get_details(serial_number: str):
                     continue
 
         if df is None:
-            # Fallback to read from the generated file stored in the database
-            generated_file = dir / "Generated_qr.csv"
-            if generated_file.exists():
-                try:
-                    df = pd.read_csv(str(generated_file))
-                    if serial_number not in df["IN-HOUSE SERIAL NUMBER"].values:
-                        raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
-                except Exception as e:
-                    print(f"Error reading {generated_file}: {e}")
-                    raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
+            raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
 
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
@@ -296,6 +262,7 @@ async def get_details(serial_number: str):
     except Exception as e:
         print(f"Error in get_details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
+
 @app.get("/details/{serial_number}")
 async def show_details(request: Request, serial_number: str):
     """Show details page directly."""
