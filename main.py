@@ -139,14 +139,13 @@ async def upload_csv(file: UploadFile):
                 if col not in current_columns:
                     missing_columns.append(col)
 
-            if not missing_columns:
-                # Store the file as is
-                output_path = upload_dir / file.filename
-                if file_extension.endswith('.csv'):
-                    df.to_csv(output_path, index=False)
-                else:
-                    df.to_excel(output_path, index=False)
-                return {"detail": "File uploaded and stored successfully."}
+            if missing_columns:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": f"Missing required columns: {', '.join(missing_columns)}. Found columns: {df.columns.tolist()}"
+                    }
+                )
 
             # Generate "In-house serial number" for each row
             df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
@@ -255,16 +254,7 @@ async def get_details(serial_number: str):
                     continue
 
         if df is None:
-            # Fallback to read from the generated file stored in the database
-            generated_file = dir / "Generated_file.csv"
-            if generated_file.exists():
-                try:
-                    df = pd.read_csv(str(generated_file))
-                    if serial_number not in df["IN-HOUSE SERIAL NUMBER"].values:
-                        raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
-                except Exception as e:
-                    print(f"Error reading {generated_file}: {e}")
-                    raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
+            raise HTTPException(status_code=404, detail="Serial number not found in any data file.")
 
         row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
 
@@ -284,6 +274,7 @@ async def get_details(serial_number: str):
     except Exception as e:
         print(f"Error in get_details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
+
 @app.get("/details/{serial_number}")
 async def show_details(request: Request, serial_number: str):
     """Show details page directly."""
