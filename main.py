@@ -151,8 +151,8 @@ async def upload_csv(file: UploadFile):
             df["IN-HOUSE SERIAL NUMBER"] = [generate_code() for _ in range(len(df))]
             df["EXPIRY DATE"] = "31/12/2025"
 
-            # Use HTTPS production URL for QR codes
-            base_url = f"{BASE_URL}/scan/"
+            # Use HTTPS production URL for direct links
+            base_url = f"{BASE_URL}/"  # Direct root URL
             print(f"Using production URL: {base_url}")
 
             # Generate QR codes for each row
@@ -168,6 +168,7 @@ async def upload_csv(file: UploadFile):
                         print("Warning: Empty serial number found")
                         continue
 
+                    # Create QR code with direct link
                     qr_data = base_url + serial_number
                     print(f"QR Data URL: {qr_data}")
 
@@ -190,9 +191,9 @@ async def upload_csv(file: UploadFile):
                     print(f"Error processing row: {row_error}")
                     continue
 
-            # Add QR code links with HTTPS
-            df["QR CODE LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(
-                lambda x: f"{BASE_URL}/qr_codes/{upload_id}/qr_{x}.png"
+            # Add direct links (not QR code image links)
+            df["DIRECT LINK"] = df["IN-HOUSE SERIAL NUMBER"].apply(
+                lambda x: f"{BASE_URL}/{x}"
             )
 
             # Store the DataFrame
@@ -265,7 +266,7 @@ async def get_details(serial_number: str):
             "in_house_serial_number": str(row["IN-HOUSE SERIAL NUMBER"].iloc[0]),
             "form_d": str(row["FORM D"].iloc[0]) if not pd.isna(row["FORM D"].iloc[0]) else "",
             "expiry_date": str(row["EXPIRY DATE"].iloc[0]) if not pd.isna(row["EXPIRY DATE"].iloc[0]) else "",
-            "serial_number": str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
+            "factory_serial_number": str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
         }
 
     except HTTPException:
@@ -273,3 +274,49 @@ async def get_details(serial_number: str):
     except Exception as e:
         print(f"Error in get_details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
+
+@app.get("/details/{serial_number}")
+async def show_details(request: Request, serial_number: str):
+    """Show details page directly."""
+    try:
+        details = await get_details(serial_number)
+        return templates.TemplateResponse(
+            "scan.html",
+            {
+                "request": request,
+                "details": details,
+                "error": None
+            }
+        )
+    except HTTPException as e:
+        return templates.TemplateResponse(
+            "scan.html",
+            {
+                "request": request,
+                "details": None,
+                "error": e.detail
+            }
+        )
+
+@app.get("/{serial_number}")
+async def direct_details(request: Request, serial_number: str):
+    """Show details directly when accessing via serial number URL."""
+    try:
+        details = await get_details(serial_number)
+        return templates.TemplateResponse(
+            "scan.html",
+            {
+                "request": request,
+                "details": details,
+                "error": None
+            }
+        )
+    except HTTPException as e:
+        return templates.TemplateResponse(
+            "scan.html",
+            {
+                "request": request,
+                "details": None,
+                "error": e.detail
+            }
+        )
