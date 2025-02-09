@@ -253,7 +253,9 @@ async def get_details(serial_number: str):
                 except Exception as e:
                     print(f"Error reading {data_file}: {e}")
                     continue
-
+        
+        row = None
+        
         if df is None:
             generated_file = dir / "Generated_qr.csv"
             if generated_file.exists():
@@ -264,8 +266,6 @@ async def get_details(serial_number: str):
                 except Exception as e:
                     print(f"Error reading {generated_file}: {e}")
                     raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
-
-            row = None
             
             print(f"is df object present : {(df != None)}")
             
