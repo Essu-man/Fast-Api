@@ -257,7 +257,13 @@ async def get_details(serial_number: str):
         row = None
         
         if df is None:
+            
+            print(f"defaulting to getting details form generated qr csv/xlsx")
+            
             generated_file = dir / "Generated_qr.csv"
+            
+            print(f"is generated_qr.csv file exist : {generated_file.exists()}")
+            
             if generated_file.exists():
                 try:
                     df = pd.read_csv(str(generated_file))
