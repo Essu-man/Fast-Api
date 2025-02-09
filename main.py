@@ -296,7 +296,11 @@ async def get_details(serial_number: str):
                 
                 logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
                 
-                print(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
+                if row.empty:
+                    raise HTTPException(status_code=404, detail="Serial number not found.")
+                else:
+                    row_keys = row.keys
+                    logger.info(f"list of keys found in rows : {row_keys}")
 
         return {
             "dv_number": str(row["DV NUMBER"].iloc[0]) if not pd.isna(row["DV NUMBER"].iloc[0]) else "",
