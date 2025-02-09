@@ -254,6 +254,8 @@ async def get_details(serial_number: str):
                     print(f"Error reading {data_file}: {e}")
                     continue
         
+        print(f"is df object prenset or none : {df is None}")
+        
         row = None
         
         if df is None:
