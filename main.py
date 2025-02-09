@@ -268,6 +268,8 @@ async def get_details(serial_number: str):
                     raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
 
             row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
+            
+            logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
 
             if row.empty:
                 raise HTTPException(status_code=404, detail="Serial number not found.")
