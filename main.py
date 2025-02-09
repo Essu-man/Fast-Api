@@ -289,6 +289,14 @@ async def get_details(serial_number: str):
             else:
                 row_keys = row.keys
                 print(f"list of keys found in rows : {row_keys}")
+                
+        else:
+            if df is not None:
+                row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
+                
+                logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
+                
+                print(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
 
         return {
             "dv_number": str(row["DV NUMBER"].iloc[0]) if not pd.isna(row["DV NUMBER"].iloc[0]) else "",
