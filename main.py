@@ -251,22 +251,22 @@ async def get_details(serial_number: str):
                         df = temp_df
                         break
                 except Exception as e:
-                    print(f"Error reading {data_file}: {e}")
+                    logger.error(f"Error reading {data_file}: {e}")
                     continue
         
-        print(f"is df object prenset or none : {df is None}")
+        logger.info(f"is df object prenset or none : {df is None}")
         
         row = None
         
-        factory_serial_number = None
+        factory_serial_number = ""
         
         if df is None:
             
-            print(f"defaulting to getting details form generated qr csv/xlsx")
+            logger.info(f"defaulting to getting details form generated qr csv/xlsx")
             
             generated_file = dir / "Generated_qr.csv"
             
-            print(f"is generated_qr.csv file exist : {generated_file.exists()}")
+            logger.info(f"is generated_qr.csv file exist : {generated_file.exists()}")
             
             if generated_file.exists():
                 try:
@@ -274,23 +274,21 @@ async def get_details(serial_number: str):
                     if serial_number not in df["IN-HOUSE SERIAL NUMBER"].values:
                         raise HTTPException(status_code=404, detail="Serial number not found .")
                 except Exception as e:
-                    print(f"Error reading {generated_file}: {e}")
+                    logger.error(f"Error reading {generated_file}: {e}")
                     raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
             
-            print(f"is df object present : {(df != None)}")
+            logger.info(f"is df object present : {(df != None)}")
             
             if df is not None:
                 row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
                 
                 logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
                 
-                print(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
-
             if row.empty:
                 raise HTTPException(status_code=404, detail="Serial number not found.")
             else:
                 row_keys = row.keys
-                print(f"list of keys found in rows : {row_keys}")
+                logger.info(f"list of keys found in rows : {row_keys}")
                 
         else:
             if df is not None:
@@ -305,22 +303,24 @@ async def get_details(serial_number: str):
                     
                     if 'SERIAL NUMBER' in row:
                         logger.info(f"has serial number in rows")
+                        factory_serial_number = str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
                         
                     if 'SERIAL NUMBERS' in row:
                         logger.info(f"has serial numbers in rows")
+                        factory_serial_number = str(row["SERIAL NUMBERS"].iloc[0]) if not pd.isna(row["SERIAL NUMBERS"].iloc[0]) else ""
     
         return {
             "dv_number": str(row["DV NUMBER"].iloc[0]) if not pd.isna(row["DV NUMBER"].iloc[0]) else "",
             "in_house_serial_number": str(row["IN-HOUSE SERIAL NUMBER"].iloc[0]),
             "form_d": str(row["FORM D"].iloc[0]) if not pd.isna(row["FORM D"].iloc[0]) else "",
             "expiry_date": str(row["EXPIRY DATE"].iloc[0]) if not pd.isna(row["EXPIRY DATE"].iloc[0]) else "",
-            "factory_serial_number": str(row["SERIAL NUMBER"].iloc[0]) if not pd.isna(row["SERIAL NUMBER"].iloc[0]) else ""
+            "factory_serial_number": factory_serial_number
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in get_details: {str(e)}")
+        logger.error(f"Error in get_details: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
 
