@@ -258,6 +258,8 @@ async def get_details(serial_number: str):
         
         row = None
         
+        factory_serial_number = None
+        
         if df is None:
             
             print(f"defaulting to getting details form generated qr csv/xlsx")
@@ -299,9 +301,14 @@ async def get_details(serial_number: str):
                 if row.empty:
                     raise HTTPException(status_code=404, detail="Serial number not found.")
                 else:
-                    
                     logger.info(f"list of keys found in rows : {row.keys()}")
                     
+                    if 'SERIAL NUMBER' in row:
+                        logger.info(f"has serial number in rows")
+                        
+                    if 'SERIAL NUMBERS' in row:
+                        logger.info(f"has serial numbers in rows")
+    
         return {
             "dv_number": str(row["DV NUMBER"].iloc[0]) if not pd.isna(row["DV NUMBER"].iloc[0]) else "",
             "in_house_serial_number": str(row["IN-HOUSE SERIAL NUMBER"].iloc[0]),
