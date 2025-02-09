@@ -301,7 +301,7 @@ async def get_details(serial_number: str):
                 else:
                     row_keys = []
                     
-                    for row_key in row.keys:
+                    for row_key in list(row.keys):
                         row_keys.append(row_key)
                     
                     logger.info(f"list of keys found in rows : {row_keys}")
