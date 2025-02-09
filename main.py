@@ -14,7 +14,8 @@ from dotenv import load_dotenv
 from pathlib import Path
 import logging
 import uuid
-
+from openpyxl import load_workbook
+import traceback
 
 ### configuration setting for logging to file 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(module)s %(funcName)s %(message)s', filename="logs/app.log")
@@ -24,9 +25,6 @@ logger.setLevel(logging.NOTSET)
 console = logging.StreamHandler()
 console.setLevel(logging.NOTSET)
 logging.getLogger("").addHandler(console)
-
-from openpyxl import load_workbook
-import traceback
 
 app = FastAPI()
 
@@ -270,9 +268,14 @@ async def get_details(serial_number: str):
             row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
             
             logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
+            
+            print(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
 
             if row.empty:
                 raise HTTPException(status_code=404, detail="Serial number not found.")
+            else:
+                row_keys = row.keys
+                print(f"list of keys found in rows : {row_keys}")
 
         return {
             "dv_number": str(row["DV NUMBER"].iloc[0]) if not pd.isna(row["DV NUMBER"].iloc[0]) else "",
