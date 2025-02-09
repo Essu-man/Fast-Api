@@ -267,7 +267,7 @@ async def get_details(serial_number: str):
 
             row = None
             
-            logger.info(f"is df object present : {(df != None)}")
+            print(f"is df object present : {(df != None)}")
             
             if df is not None:
                 row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
