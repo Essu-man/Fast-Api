@@ -265,11 +265,16 @@ async def get_details(serial_number: str):
                     print(f"Error reading {generated_file}: {e}")
                     raise HTTPException(status_code=500, detail=f"Error retrieving details: {str(e)}")
 
-            row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
+            row = None
             
-            logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
+            logger.info(f"is df object present : {(df != None)}")
             
-            print(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
+            if df is not None:
+                row = df[df["IN-HOUSE SERIAL NUMBER"] == serial_number]
+                
+                logger.info(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
+                
+                print(f"get details with in-house serial number : {serial_number} : if rows empty : {row.empty}")
 
             if row.empty:
                 raise HTTPException(status_code=404, detail="Serial number not found.")
